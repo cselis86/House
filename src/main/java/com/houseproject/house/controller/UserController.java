@@ -12,30 +12,9 @@ import java.util.List;
 @CrossOrigin("*")
 public class UserController {
 
-    private final UserService userService;
-
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
-
     @GetMapping("/hello")
     public String getHello(){
         return "Hello";
-    }
-
-    @GetMapping("/user")
-    public List<User> getUsers(){
-        return userService.findAll();
-    }
-
-    @PostMapping
-    public User newUser(@RequestBody NewUserRequest userRequest){
-        User user = new User();
-
-        user.setUsername(userRequest.email());
-        user.setUsername(userRequest.name());
-
-        return userService.saveUser(user);
     }
 
 }
