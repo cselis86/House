@@ -22,22 +22,4 @@ public class HouseApplication {
         SpringApplication.run(HouseApplication.class, args);
     }
 
-
-    @Bean
-    CommandLineRunner run(RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder passwordEncoder){
-        return args -> {
-
-            if (roleRepository.findByAuthority("ADMIN").isPresent()) return;
-
-            Role adminRole = roleRepository.save(new Role("ADMIN"));
-            roleRepository.save(new Role("USER"));
-
-            Set<Role> roles = new HashSet<>();
-            roles.add(adminRole);
-
-            User admin = new User("Elis", "elis@live.com", passwordEncoder.encode("pas"), roles);
-
-            userRepository.save(admin);
-        };
-    }
 }

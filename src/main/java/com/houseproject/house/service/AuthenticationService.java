@@ -1,49 +1,76 @@
 package com.houseproject.house.service;
 
 
+import com.houseproject.house.dto.AuthenticationRequest;
+import com.houseproject.house.dto.AuthenticationResponse;
+import com.houseproject.house.dto.RegisterRequest;
 import com.houseproject.house.models.Role;
 import com.houseproject.house.models.User;
 import com.houseproject.house.repository.RoleRepository;
 import com.houseproject.house.repository.UserRepository;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
-import java.util.Set;
+import java.util.Optional;
+
 
 @Service
-@Transactional
+@RequiredArgsConstructor
 public class AuthenticationService {
 
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private RoleRepository roleRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+
+    private final UserRepository repository;
+    private final RoleRepository roleRepository;
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
+    private final PasswordEncoder passwordEncoder;
+
+    public AuthenticationResponse register(RegisterRequest request) {
+
+        HashSet<Role> roles = new HashSet<>();
+//        Role role = roleRepository.findById(1).orElse(null);
+        Role role = new Role("USER");
+
+        roleRepository.save(role);
+        roles.add(role);
 
 
-//    @Autowired
-//    public AuthenticationService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
-//        this.userRepository = userRepository;
-//        this.roleRepository = roleRepository;
-//        this.passwordEncoder = passwordEncoder;
-//    }
+        User user = User.builder()
+                .name(request.getName())
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .authorities(roles)
+                .build();
 
+        repository.save(user);
 
-    public User registerUser(String name, String username, String password){
+        String jwtToken = jwtService.generateToken(user);
 
-        String encodePassword = passwordEncoder.encode(password);
-        Role role = roleRepository.findByAuthority("USER")
-                .orElseThrow(() -> new RuntimeException("Role not found")); // Throw an exception if the role is not found
-
-        Set<Role> authorities = new HashSet<>();
-
-        authorities.add(role);
-
-        return userRepository.save(new User(name,username,encodePassword,authorities));
+        return AuthenticationResponse.builder()
+                .token(jwtToken)
+                .build();
     }
 
+    public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsername(),
+                        request.getPassword()
+                )
+        );
+
+        UserDetails user = repository.findByUsername(request.getUsername()).orElseThrow();
+
+        String jwtToken = jwtService.generateToken(user);
+
+        return AuthenticationResponse.builder()
+                .token(jwtToken)
+                .build();
+    }
 }
